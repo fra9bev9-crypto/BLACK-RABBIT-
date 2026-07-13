@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Cost & Magazzino</title>
+<style>
+  :root{
+    --verde-950: #12201a; --verde-900: #1a2b22; --verde-800: #24382c; --verde-700: #33503d; --verde-line: #3d5c47;
+    --ambra: #e0a339; --ambra-dim: #a97a2b; --panna: #f2ede1; --panna-dim: #b9c4ba; --rosso: #d1604a; --verde-ok: #6fae7c;
+    --font-display: 'Courier New', ui-monospace, 'SF Mono', Menlo, monospace;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body{ margin:0; min-height:100vh; background: radial-gradient(1200px 600px at 10% -10%, rgba(224,163,57,0.06), transparent 60%), var(--verde-950); color: var(--panna); font-family: var(--font-body); padding: 40px 20px 80px; }
+  .wrap{ max-width: 980px; margin: 0 auto; }
+
+  header{ display:flex; justify-content:space-between; align-items:flex-end; border-bottom: 2px dashed var(--verde-line); padding-bottom: 18px; margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
+  .eyebrow{ font-family: var(--font-display); letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; color: var(--ambra); margin: 0 0 6px; }
+  h1{ margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 4vw, 30px); letter-spacing: -0.01em; }
+  .data-oggi{ font-family: var(--font-display); font-size: 13px; color: var(--panna-dim); text-align: right; }
+
+  nav.tabs{ display:flex; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; }
+  nav.tabs button{
+    background: var(--verde-900); color: var(--panna-dim); border: 1px solid var(--verde-line);
+    font-family: var(--font-display); font-size: 12.5px; padding: 9px 16px; border-radius: 999px; cursor:pointer;
+  }
+  nav.tabs button.attiva{ background: var(--ambra); color: var(--verde-950); border-color: var(--ambra); font-weight:700; }
+  nav.tabs button:not(.attiva):hover{ border-color: var(--ambra); color: var(--ambra); }
+
+  .vista{ display:none; }
+  .vista.attiva{ display:block; }
+
+  .card{ background: var(--verde-900); border: 1px solid var(--verde-line); border-radius: 10px; padding: 22px; margin-bottom: 24px; }
+  .card h2{ margin: 0 0 4px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panna-dim); }
+  .card p.sub{ margin: 0 0 18px; font-size: 13px; color: var(--panna-dim); }
+
+  .form-grid{ display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  .riga-form{ display:grid; grid-template-columns: 2fr 1fr auto; gap: 12px; align-items:end; margin-bottom: 14px; }
+  @media (max-width: 640px){ .form-grid, .riga-form{ grid-template-columns: 1fr; } }
+
+  label{ display:block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ambra); margin-bottom: 6px; }
+  input, select{ width: 100%; background: var(--verde-950); border: 1px solid var(--verde-line); border-radius: 6px; padding: 11px 12px; color: var(--panna); font-family: var(--font-body); font-size: 14px; transition: border-color .15s ease, box-shadow .15s ease; }
+  input::placeholder{ color: #5b6b60; }
+  input:focus, select:focus{ outline: none; border-color: var(--ambra); box-shadow: 0 0 0 3px rgba(224,163,57,0.18); }
+
+  button{ font-family: var(--font-body); font-weight: 600; font-size: 14px; border-radius: 6px; border: none; cursor: pointer; padding: 11px 18px; transition: transform .1s ease, filter .15s ease; }
+  button:focus-visible{ outline: 2px solid var(--ambra); outline-offset: 2px; }
+  button:active{ transform: translateY(1px); }
+  .btn-aggiungi{ background: var(--verde-700); color: var(--panna); border: 1px solid var(--verde-line); white-space: nowrap; }
+  .btn-aggiungi:hover{ filter: brightness(1.15); }
+  .btn-scansiona{ background: var(--verde-800); color: var(--ambra); border: 1px solid var(--ambra-dim); }
+  .btn-scansiona:hover{ filter: brightness(1.2); }
+
+  .table-card{ background: var(--verde-900); border: 1px solid var(--verde-line); border-radius: 10px; overflow: hidden; }
+  .table-head{ display:flex; justify-content: space-between; align-items:center; padding: 18px 22px; border-bottom: 1px solid var(--verde-line); flex-wrap: wrap; gap: 10px; }
+  .table-head h2{ margin:0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--panna-dim); }
+  .contatore{ font-family: var(--font-display); font-size: 12px; color: var(--ambra); background: rgba(224,163,57,0.1); border: 1px solid var(--ambra-dim); padding: 3px 10px; border-radius: 999px; }
+
+  table{ width: 100%; border-collapse: collapse; }
+  thead th{ text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--panna-dim); padding: 10px 22px; border-bottom: 1px solid var(--verde-line); }
+  thead th.num, tbody td.num{ text-align: right; }
+  thead th.azione, tbody td.azione{ text-align: center; width: 60px; }
+  tbody td{ padding: 14px 22px; border-bottom: 1px solid var(--verde-800); font-size: 14px; }
+  tbody tr:last-child td{ border-bottom: none; }
+  tbody tr:hover{ background: rgba(224,163,57,0.04); }
+  td.num, td.prezzo{ font-family: var(--font-display); }
+
+  .badge-basso{ display:inline-block; margin-left: 8px; font-family: var(--font-display); font-size: 10px; color: var(--rosso); border: 1px solid var(--rosso); padding: 1px 6px; border-radius: 999px; vertical-align: middle; }
+
+  .btn-elimina{ background: transparent; border: 1px solid var(--verde-line); color: var(--panna-dim); width: 30px; height: 30px; line-height: 1; border-radius: 6px; font-size: 15px; }
+  .btn-elimina:hover{ border-color: var(--rosso); color: var(--rosso); }
+
+  .stato-vuoto{ padding: 40px 22px; text-align: center; color: var(--panna-dim); }
+  .stato-vuoto p{ margin: 4px 0; font-size: 13.5px; }
+  .stato-vuoto .grande{ font-size: 15px; color: var(--panna); margin-bottom: 6px; }
+
+  .barra-salva{ position: sticky; bottom: 20px; margin-top: 24px; display:flex; justify-content: flex-end; align-items:center; gap: 14px; }
+  .stato-salvataggio{ font-family: var(--font-display); font-size: 12px; color: var(--panna-dim); opacity: 0; transition: opacity .2s ease; }
+  .stato-salvataggio.visibile{ opacity: 1; }
+  .btn-salva{ background: var(--ambra); color: var(--verde-950); font-size: 15px; padding: 13px 28px; box-shadow: 0 6px 20px rgba(224,163,57,0.25); }
+  .btn-salva:hover{ filter: brightness(1.08); }
+
+  footer{ text-align:center; margin-top: 40px; font-size: 12px; color: #4d5c53; font-family: var(--font-display); }
+
+  /* Modale fotocamera / risultati scan */
+  .overlay{ display:none; position: fixed; inset: 0; background: rgba(10,16,13,0.75); align-items:center; justify-content:center; padding: 20px; z-index: 100; }
+  .overlay.aperto{ display:flex; }
+  .modale{ background: var(--verde-900); border: 1px solid var(--verde-line); border-radius: 12px; padding: 22px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; }
+  .modale h3{ margin: 0 0 4px; font-size: 16px; font-family: var(--font-display); }
+  .modale p.sub{ margin: 0 0 16px; font-size: 13px; color: var(--panna-dim); }
+  #videoCamera, #canvasCattura{ width: 100%; border-radius: 8px; background: #000; display:block; }
+  #canvasCattura{ display:none; }
+  .azioni-modale{ display:flex; gap: 10px; margin-top: 14px; }
+  .azioni-modale button{ flex: 1; }
+  .btn-annulla{ background: transparent; color: var(--panna-dim); border: 1px solid var(--verde-line); }
+  .btn-annulla:hover{ color: var(--panna); border-color: var(--panna-dim); }
+  .stato-scan{ display:flex; align-items:center; gap: 10px; padding: 30px 10px; justify-content:center; color: var(--panna-dim); font-size: 13.5px; }
+  .spinner{ width: 16px; height: 16px; border: 2px solid var(--verde-line); border-top-color: var(--ambra); border-radius: 50%; animation: girare 0.8s linear infinite; }
+  @keyframes girare{ to{ transform: rotate(360deg); } }
+  .errore-scan{ background: rgba(209,96,74,0.1); border: 1px solid var(--rosso); color: var(--rosso); border-radius: 8px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; }
+  table.tabella-review{ width:100%; border-collapse: collapse; margin-top: 6px; }
+  table.tabella-review th{ text-align:left; font-size: 10.5px; text-transform:uppercase; letter-spacing: 0.05em; color: var(--panna-dim); padding: 6px 4px; border-bottom: 1px solid var(--verde-line); }
+  table.tabella-review td{ padding: 6px 4px; border-bottom: 1px solid var(--verde-800); }
+  table.tabella-review input{ padding: 7px 8px; font-size: 13px; }
+  table.tabella-review td.riga-num{ width: 90px; }
+  table.tabella-review td.riga-azione{ width: 34px; text-align:center; }
+
+  /* Ricette */
+  .layout{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items:start; }
+  @media (max-width: 860px){ .layout{ grid-template-columns: 1fr; } }
+  .riepilogo-riga{ display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid var(--verde-800); font-size: 14px; }
+  .riepilogo-riga:last-child{ border-bottom:none; }
+  .riepilogo-riga .valore{ font-family: var(--font-display); }
+  .riepilogo-riga.grande .valore{ font-size: 20px; color: var(--ambra); }
+  .riepilogo-riga.grande{ font-size: 15px; padding-top: 16px; }
+  .food-cost-badge{ display:inline-block; font-family: var(--font-display); font-size: 12px; padding: 3px 10px; border-radius: 999px; margin-top: 4px; }
+  .fc-ok{ color: var(--verde-ok); border: 1px solid var(--verde-ok); background: rgba(111,174,124,0.08); }
+  .fc-attenzione{ color: var(--ambra); border: 1px solid var(--ambra); background: rgba(224,163,57,0.08); }
+  .fc-alto{ color: var(--rosso); border: 1px solid var(--rosso); background: rgba(209,96,74,0.08); }
+  .lista-ricette{ display:flex; flex-direction:column; gap:8px; }
+  .chip-ricetta{ display:flex; justify-content:space-between; align-items:center; background: var(--verde-950); border: 1px solid var(--verde-line); border-radius: 8px; padding: 10px 14px; font-size: 13.5px; cursor:pointer; }
+  .chip-ricetta:hover{ border-color: var(--ambra); }
+  .chip-ricetta .costo{ font-family: var(--font-display); color: var(--ambra); }
+  .avviso{ font-size: 13px; color: var(--panna-dim); background: var(--verde-950); border: 1px solid var(--verde-line); border-radius: 8px; padding: 12px 14px; margin-bottom: 18px; }
+  .suggerito-box{ background: rgba(224,163,57,0.08); border: 1px solid var(--ambra-dim); border-radius: 8px; padding: 14px; margin-top: 14px; }
+  .suggerito-box .etichetta{ font-size: 11px; text-transform:uppercase; letter-spacing:0.06em; color: var(--ambra); margin-bottom:6px; }
+  .suggerito-box .prezzo{ font-family: var(--font-display); font-size: 22px; color: var(--panna); }
+
+  /* Report */
+  .griglia-kpi{ display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .kpi{ background: var(--verde-900); border: 1px solid var(--verde-line); border-radius: 10px; padding: 18px; }
+  .kpi .etichetta{ font-size: 11px; text-transform:uppercase; letter-spacing:0.06em; color: var(--panna-dim); margin-bottom: 8px; }
+  .kpi .valore-kpi{ font-family: var(--font-display); font-size: 24px; color: var(--ambra); }
+  .kpi .nota-kpi{ font-size: 12px; color: var(--panna-dim); margin-top: 4px; }
+  .riga-report{ display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom: 1px solid var(--verde-800); }
+  .riga-report:last-child{ border-bottom:none; }
+  .riga-report .nome-r{ font-size: 14px; }
+  .riga-report .dettaglio-r{ font-size: 12px; color: var(--panna-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Gestione ristorante</p>
+      <h1>Food Cost & Magazzino</h1>
+    </div>
+    <div class="data-oggi" id="dataOggi"></div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="attiva" data-tab="magazzino">Magazzino</button>
+    <button type="button" data-tab="ricette">Ricette</button>
+    <button type="button" data-tab="report">Report</button>
+  </nav>
+
+  <!-- ==================== VISTA MAGAZZINO ==================== -->
+  <section class="vista attiva" id="vista-magazzino">
+    <section class="card">
+      <h2>Nuovo ingrediente</h2>
+      <p class="sub">Inserisci un ingrediente alla volta: verrà aggiunto alla lista qui sotto.</p>
+      <form id="formIngrediente" class="form-grid">
+        <div>
+          <label for="nome">Nome ingrediente</label>
+          <input type="text" id="nome" placeholder="Es. Farina 00" required>
+        </div>
+        <div>
+          <label for="prezzo">Prezzo al kg (€)</label>
+          <input type="number" id="prezzo" placeholder="0.00" min="0" step="0.01" required>
+        </div>
+        <div>
+          <label for="quantita">Quantità in magazzino (kg)</label>
+          <input type="number" id="quantita" placeholder="0" min="0" step="0.01" required>
+        </div>
+        <button type="submit" class="btn-aggiungi">+ Aggiungi</button>
+      </form>
+    </section>
+
+    <section class="table-card">
+      <div class="table-head">
+        <h2>Elenco ingredienti</h2>
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <span class="contatore" id="contatore">0 ingredienti</span>
+          <button type="button" class="btn-scansiona" id="btnApriScan">📷 Scansiona bolla</button>
+        </div>
+      </div>
+      <table id="tabellaIngredienti">
+        <thead>
+          <tr><th>Nome</th><th class="num">Prezzo/kg</th><th class="num">Quantità</th><th class="num">Valore totale</th><th class="azione"></th></tr>
+        </thead>
+        <tbody id="corpoTabella"></tbody>
+      </table>
+      <div class="stato-vuoto" id="statoVuoto">
+        <p class="grande">Il magazzino è vuoto.</p>
+        <p>Aggiungi il tuo primo ingrediente con il modulo qui sopra.</p>
+      </div>
+    </section>
+
+    <div class="barra-salva">
+      <span class="stato-salvataggio" id="statoSalvataggio">Salvato ✓</span>
+      <button type="button" class="btn-salva" id="btnSalva">Salva magazzino</button>
+    </div>
+  </section>
+
+  <!-- ==================== VISTA RICETTE ==================== -->
+  <section class="vista" id="vista-ricette">
+    <div class="avviso" id="avvisoMagazzinoVuoto" style="display:none;">
+      Il magazzino è vuoto: vai su "Magazzino" e aggiungi qualche ingrediente prima di creare una ricetta.
+    </div>
+
+    <div class="layout">
+      <div>
+        <section class="card">
+          <h2>Nuova ricetta</h2>
+          <p class="sub">Dai un nome al piatto, poi aggiungi gli ingredienti con la quantità usata a porzione.</p>
+          <div style="margin-bottom:18px;">
+            <label for="nomeRicetta">Nome piatto</label>
+            <input type="text" id="nomeRicetta" placeholder="Es. Tagliatelle al ragù">
+          </div>
+          <div class="riga-form">
+            <div>
+              <label for="selectIngrediente">Ingrediente</label>
+              <select id="selectIngrediente"></select>
+            </div>
+            <div>
+              <label for="grammiUsati">Quantità (g)</label>
+              <input type="number" id="grammiUsati" placeholder="Es. 120" min="0" step="1">
+            </div>
+            <button type="button" class="btn-aggiungi" id="btnAggiungiIngrediente">+ Aggiungi</button>
+          </div>
+          <table>
+            <thead><tr><th>Ingrediente</th><th class="num">Quantità</th><th class="num">Costo</th><th></th></tr></thead>
+            <tbody id="corpoRicetta"></tbody>
+          </table>
+          <div class="stato-vuoto" id="statoVuotoRicetta">Nessun ingrediente ancora aggiunto a questa ricetta.</div>
+        </section>
+      </div>
+
+      <div>
+        <section class="card">
+          <h2>Riepilogo costi</h2>
+          <p class="sub">Imposta porzioni e food cost obiettivo per scoprire il prezzo di vendita consigliato.</p>
+
+          <div style="margin-bottom:14px;">
+            <label for="numPorzioni">Porzioni</label>
+            <input type="number" id="numPorzioni" value="1" min="1" step="1">
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label for="prezzoVendita">Prezzo di vendita a porzione (€) — opzionale</label>
+            <input type="number" id="prezzoVendita" placeholder="0.00" min="0" step="0.5">
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <label for="targetFoodCost">Food cost obiettivo (%)</label>
+            <input type="number" id="targetFoodCost" placeholder="Es. 30" min="1" max="90" step="1" value="30">
+          </div>
+
+          <div class="riepilogo-riga"><span>Costo ingredienti totale</span><span class="valore" id="costoTotale">€ 0,00</span></div>
+          <div class="riepilogo-riga"><span>Costo a porzione</span><span class="valore" id="costoPorzione">€ 0,00</span></div>
+          <div class="riepilogo-riga grande">
+            <span>Food cost attuale</span>
+            <span><span class="valore" id="foodCostPerc">—</span> <span id="foodCostBadge"></span></span>
+          </div>
+
+          <div class="suggerito-box">
+            <div class="etichetta">Prezzo di vendita ipotetico consigliato</div>
+            <div class="prezzo" id="prezzoSuggerito">€ 0,00</div>
+            <div class="nota-kpi">a porzione, per restare al <span id="targetFoodCostEcho">30</span>% di food cost</div>
+          </div>
+
+          <button type="button" class="btn-salva" id="btnSalvaRicetta" style="width:100%; margin-top:18px;">Salva ricetta</button>
+        </section>
+
+        <section class="card">
+          <h2>Ricette salvate</h2>
+          <div class="lista-ricette" id="listaRicette"></div>
+          <div class="stato-vuoto" id="statoVuotoLista" style="display:none;">Nessuna ricetta salvata ancora.</div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== VISTA REPORT ==================== -->
+  <section class="vista" id="vista-report">
+    <div class="griglia-kpi" id="grigliaKpi"></div>
+
+    <section class="card">
+      <h2>Ingredienti a maggior valore in magazzino</h2>
+      <p class="sub">Dove hai più capitale fermo in dispensa.</p>
+      <div id="listaTopIngredienti"></div>
+      <div class="stato-vuoto" id="statoVuotoTopIngredienti" style="display:none;">Nessun dato disponibile: aggiungi ingredienti al magazzino.</div>
+    </section>
+
+    <section class="card">
+      <h2>Food cost per ricetta</h2>
+      <p class="sub">Ordinate dalla più critica alla più efficiente.</p>
+      <div id="listaFoodCostRicette"></div>
+      <div class="stato-vuoto" id="statoVuotoRicetteReport" style="display:none;">Nessuna ricetta salvata: creane una nella scheda "Ricette".</div>
+    </section>
+  </section>
+
+  <footer>local_storage · nessun dato lascia il tuo browser</footer>
+</div>
+
+<!-- Modale fotocamera -->
+<div class="overlay" id="overlayCamera">
+  <div class="modale">
+    <h3>Inquadra la bolla</h3>
+    <p class="sub">Tieni il foglio ben disteso e leggibile, poi scatta.</p>
+    <video id="videoCamera" autoplay playsinline muted></video>
+    <canvas id="canvasCattura"></canvas>
+    <div class="azioni-modale">
+      <button type="button" class="btn-annulla" id="btnAnnullaCamera">Annulla</button>
+      <button type="button" class="btn-salva" id="btnScatta" style="flex:2;">Scatta foto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale revisione risultati scan -->
+<div class="overlay" id="overlayReview">
+  <div class="modale">
+    <h3>Controlla prima di salvare</h3>
+    <p class="sub">Questo è ciò che l'AI ha letto sulla bolla. Correggi eventuali errori, poi conferma.</p>
+    <div id="corpoReview"></div>
+    <div class="azioni-modale">
+      <button type="button" class="btn-annulla" id="btnAnnullaReview">Annulla</button>
+      <button type="button" class="btn-salva" id="btnConfermaReview" style="flex:2;">Aggiungi al magazzino</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ---------------- Navigazione a schede ---------------- */
+  const bottoniTab = document.querySelectorAll('nav.tabs button');
+  const viste = { magazzino: document.getElementById('vista-magazzino'), ricette: document.getElementById('vista-ricette'), report: document.getElementById('vista-report') };
+
+  bottoniTab.forEach(btn => {
+    btn.addEventListener('click', () => {
+      bottoniTab.forEach(b => b.classList.remove('attiva'));
+      btn.classList.add('attiva');
+      Object.values(viste).forEach(v => v.classList.remove('attiva'));
+      viste[btn.dataset.tab].classList.add('attiva');
+      if (btn.dataset.tab === 'ricette') { popolaSelectIngredienti(); }
+      if (btn.dataset.tab === 'report') { costruisciReport(); }
+    });
+  });
+
+  /* ---------------- Dati condivisi (localStorage) ---------------- */
+  const CHIAVE_MAGAZZINO = 'foodcost_magazzino';
+  const CHIAVE_RICETTE = 'foodcost_ricette';
+
+  let ingredienti = JSON.parse(localStorage.getItem(CHIAVE_MAGAZZINO) || '[]');
+  let ricette = JSON.parse(localStorage.getItem(CHIAVE_RICETTE) || '[]');
+
+  const dataOggi = document.getElementById('dataOggi');
+  const oggi = new Date();
+  dataOggi.textContent = oggi.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+
+  function formattaEuro(v){ return '€ ' + v.toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+  /* ---------------- MAGAZZINO ---------------- */
+  const form = document.getElementById('formIngrediente');
+  const corpoTabella = document.getElementById('corpoTabella');
+  const statoVuoto = document.getElementById('statoVuoto');
+  const contatore = document.getElementById('contatore');
+  const btnSalva = document.getElementById('btnSalva');
+  const statoSalvataggio = document.getElementById('statoSalvataggio');
+
+  function salvaMagazzino() {
+    localStorage.setItem(CHIAVE_MAGAZZINO, JSON.stringify(ingredienti));
+    statoSalvataggio.classList.add('visibile');
+    clearTimeout(salvaMagazzino._t);
+    salvaMagazzino._t = setTimeout(() => statoSalvataggio.classList.remove('visibile'), 1800);
+  }
+
+  function disegnaTabella() {
+    corpoTabella.innerHTML = '';
+    const c = ingredienti.length === 0;
+    statoVuoto.style.display = c ? 'block' : 'none';
+    document.getElementById('tabellaIngredienti').style.display = c ? 'none' : 'table';
+
+    ingredienti.forEach((ing, indice) => {
+      const valoreTotale = ing.prezzo * ing.quantita;
+      const scorteBasse = ing.quantita <= 2;
+      const riga = document.createElement('tr');
+      riga.innerHTML = `
+        <td>${ing.nome}${scorteBasse ? '<span class="badge-basso">SCORTA BASSA</span>' : ''}</td>
+        <td class="num prezzo">€ ${(ing.prezzo).toLocaleString('it-IT',{minimumFractionDigits:2})}</td>
+        <td class="num prezzo">${(ing.quantita).toLocaleString('it-IT',{minimumFractionDigits:2})} kg</td>
+        <td class="num prezzo">€ ${valoreTotale.toLocaleString('it-IT',{minimumFractionDigits:2})}</td>
+        <td class="azione"><button type="button" class="btn-elimina" data-indice="${indice}" title="Elimina">✕</button></td>`;
+      corpoTabella.appendChild(riga);
+    });
+
+    contatore.textContent = `${ingredienti.length} ingredient${ingredienti.length === 1 ? 'e' : 'i'}`;
+
+    document.querySelectorAll('#corpoTabella .btn-elimina').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        ingredienti.splice(parseInt(e.currentTarget.dataset.indice, 10), 1);
+        disegnaTabella();
+        salvaMagazzino();
+      });
+    });
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('nome').value.trim();
+    const prezzo = parseFloat(document.getElementById('prezzo').value);
+    const quantita = parseFloat(document.getElementById('quantita').value);
+    if (!nome || isNaN(prezzo) || isNaN(quantita)) return;
+    ingredienti.push({ nome, prezzo, quantita });
+    disegnaTabella();
+    salvaMagazzino();
+    form.reset();
+    document.getElementById('nome').focus();
+  });
+
+  btnSalva.addEventListener('click', salvaMagazzino);
+
+  /* ---------------- Scansione bolla con fotocamera ---------------- */
+  const overlayCamera = document.getElementById('overlayCamera');
+  const overlayReview = document.getElementById('overlayReview');
+  const video = document.getElementById('videoCamera');
+  const canvas = document.getElementById('canvasCattura');
+  const corpoReview = document.getElementById('corpoReview');
+
+  let streamCamera = null;
+  let risultatiScan = [];
+
+  document.getElementById('btnApriScan').addEventListener('click', apriFotocamera);
+  document.getElementById('btnAnnullaCamera').addEventListener('click', chiudiFotocamera);
+  document.getElementById('btnScatta').addEventListener('click', scattaFoto);
+  document.getElementById('btnAnnullaReview').addEventListener('click', () => overlayReview.classList.remove('aperto'));
+  document.getElementById('btnConfermaReview').addEventListener('click', confermaRisultatiScan);
+
+  async function apriFotocamera(){
+    overlayCamera.classList.add('aperto');
+    try {
+      streamCamera = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = streamCamera;
+    } catch (err) {
+      overlayCamera.classList.remove('aperto');
+      alert('Non riesco ad accedere alla fotocamera. Controlla i permessi del browser e riprova. Ricorda: questa funzione richiede che la pagina sia aperta tramite un indirizzo https:// (non da file locale).');
+    }
+  }
+
+  function chiudiFotocamera(){
+    overlayCamera.classList.remove('aperto');
+    if (streamCamera) { streamCamera.getTracks().forEach(t => t.stop()); streamCamera = null; }
+  }
+
+  async function scattaFoto(){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const base64Immagine = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    chiudiFotocamera();
+    apriReviewCaricamento();
+    try {
+      risultatiScan = await leggiBollaConAI(base64Immagine);
+      disegnaReview();
+    } catch (err) {
+      mostraErroreReview(err.message || 'Errore durante la lettura della bolla.');
+    }
+  }
+
+  async function leggiBollaConAI(base64Immagine){
+    // Chiamiamo il NOSTRO server intermedio (Netlify Function), non Anthropic direttamente:
+    // così la chiave API resta segreta sul server e non è mai visibile nel browser.
+    const response = await fetch('/.netlify/functions/leggi-bolla', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ immagine: base64Immagine })
+    });
+
+    if (!response.ok) throw new Error('Il server intermedio non ha risposto correttamente. Controlla di aver impostato GEMINI_API_KEY su Netlify.');
+
+    const dati = await response.json();
+    if (dati.errore) throw new Error(dati.errore);
+
+    const elenco = dati.risultato || [];
+    if (elenco.length === 0) throw new Error('Nessun prodotto leggibile trovato sulla bolla. Riprova con più luce o meglio a fuoco.');
+    return elenco;
+  }
+
+  function apriReviewCaricamento(){
+    overlayReview.classList.add('aperto');
+    corpoReview.innerHTML = `<div class="stato-scan"><span class="spinner"></span><span>Sto leggendo la bolla, un attimo…</span></div>`;
+    document.getElementById('btnConfermaReview').style.visibility = 'hidden';
+  }
+
+  function mostraErroreReview(messaggio){
+    corpoReview.innerHTML = `<div class="errore-scan">${messaggio}</div>`;
+    document.getElementById('btnConfermaReview').style.visibility = 'hidden';
+  }
+
+  function disegnaReview(){
+    document.getElementById('btnConfermaReview').style.visibility = 'visible';
+    corpoReview.innerHTML = `<table class="tabella-review"><thead><tr><th>Nome</th><th class="riga-num">€/kg</th><th class="riga-num">Kg</th><th></th></tr></thead><tbody id="corpoRighReview"></tbody></table>`;
+    const corpo = document.getElementById('corpoRighReview');
+    corpo.innerHTML = risultatiScan.map((r, i) => `
+      <tr>
+        <td><input type="text" data-campo="nome" data-i="${i}" value="${r.nome}"></td>
+        <td class="riga-num"><input type="number" step="0.01" data-campo="prezzo" data-i="${i}" value="${r.prezzo}"></td>
+        <td class="riga-num"><input type="number" step="0.01" data-campo="quantita" data-i="${i}" value="${r.quantita}"></td>
+        <td class="riga-azione"><button type="button" class="btn-elimina" data-elimina="${i}">✕</button></td>
+      </tr>`).join('');
+    corpo.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', e => {
+        const i = parseInt(e.target.dataset.i, 10);
+        const campo = e.target.dataset.campo;
+        risultatiScan[i][campo] = campo === 'nome' ? e.target.value : parseFloat(e.target.value) || 0;
+      });
+    });
+    corpo.querySelectorAll('[data-elimina]').forEach(btn => {
+      btn.addEventListener('click', e => { risultatiScan.splice(parseInt(e.currentTarget.dataset.elimina, 10), 1); disegnaReview(); });
+    });
+  }
+
+  function confermaRisultatiScan(){
+    if (risultatiScan.length === 0) { overlayReview.classList.remove('aperto'); return; }
+    risultatiScan.forEach(r => { if (r.nome.trim()) ingredienti.push({ nome: r.nome.trim(), prezzo: r.prezzo, quantita: r.quantita }); });
+    disegnaTabella();
+    salvaMagazzino();
+    overlayReview.classList.remove('aperto');
+    risultatiScan = [];
+  }
+
+  /* ---------------- RICETTE ---------------- */
+  const selectIngrediente = document.getElementById('selectIngrediente');
+  const avvisoVuoto = document.getElementById('avvisoMagazzinoVuoto');
+  const corpoRicetta = document.getElementById('corpoRicetta');
+  const statoVuotoRicetta = document.getElementById('statoVuotoRicetta');
+  const listaRicette = document.getElementById('listaRicette');
+  const statoVuotoLista = document.getElementById('statoVuotoLista');
+
+  let righeRicettaCorrente = [];
+  let ricettaInModifica = null;
+
+  function popolaSelectIngredienti() {
+    selectIngrediente.innerHTML = '';
+    if (ingredienti.length === 0) { avvisoVuoto.style.display = 'block'; return; }
+    avvisoVuoto.style.display = 'none';
+    ingredienti.forEach((ing, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${ing.nome} (€ ${ing.prezzo.toFixed(2)}/kg)`;
+      selectIngrediente.appendChild(opt);
+    });
+  }
+
+  function disegnaRigheRicetta() {
+    corpoRicetta.innerHTML = '';
+    if (righeRicettaCorrente.length === 0) {
+      statoVuotoRicetta.style.display = 'block';
+    } else {
+      statoVuotoRicetta.style.display = 'none';
+      righeRicettaCorrente.forEach((riga, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${riga.nome}</td><td class="num">${riga.grammi} g</td><td class="num">${formattaEuro(riga.costo)}</td><td><button type="button" class="btn-elimina" data-i="${i}">✕</button></td>`;
+        corpoRicetta.appendChild(tr);
+      });
+      document.querySelectorAll('#corpoRicetta .btn-elimina').forEach(btn => {
+        btn.addEventListener('click', e => { righeRicettaCorrente.splice(parseInt(e.currentTarget.dataset.i, 10), 1); disegnaRigheRicetta(); aggiornaRiepilogo(); });
+      });
+    }
+    aggiornaRiepilogo();
+  }
+
+  function aggiornaRiepilogo() {
+    const costoTotale = righeRicettaCorrente.reduce((s, r) => s + r.costo, 0);
+    const porzioni = Math.max(1, parseInt(document.getElementById('numPorzioni').value, 10) || 1);
+    const costoPorzione = costoTotale / porzioni;
+    const prezzoVendita = parseFloat(document.getElementById('prezzoVendita').value);
+    const targetFC = parseFloat(document.getElementById('targetFoodCost').value) || 30;
+
+    document.getElementById('costoTotale').textContent = formattaEuro(costoTotale);
+    document.getElementById('costoPorzione').textContent = formattaEuro(costoPorzione);
+
+    const badge = document.getElementById('foodCostBadge');
+    const percEl = document.getElementById('foodCostPerc');
+    if (!prezzoVendita || prezzoVendita <= 0) {
+      percEl.textContent = '—'; badge.innerHTML = '';
+    } else {
+      const perc = (costoPorzione / prezzoVendita) * 100;
+      percEl.textContent = perc.toFixed(1) + '%';
+      let classe = 'fc-ok', testo = 'OTTIMO';
+      if (perc > 35) { classe = 'fc-alto'; testo = 'ALTO'; }
+      else if (perc > 28) { classe = 'fc-attenzione'; testo = 'ATTENZIONE'; }
+      badge.innerHTML = `<span class="food-cost-badge ${classe}">${testo}</span>`;
+    }
+
+    // Prezzo ipotetico di vendita consigliato in base al food cost obiettivo
+    const prezzoSuggerito = targetFC > 0 ? costoPorzione / (targetFC / 100) : 0;
+    document.getElementById('prezzoSuggerito').textContent = formattaEuro(prezzoSuggerito);
+    document.getElementById('targetFoodCostEcho').textContent = targetFC;
+  }
+
+  document.getElementById('btnAggiungiIngrediente').addEventListener('click', () => {
+    if (ingredienti.length === 0) return;
+    const i = parseInt(selectIngrediente.value, 10);
+    const grammi = parseFloat(document.getElementById('grammiUsati').value);
+    if (isNaN(grammi) || grammi <= 0) return;
+    const ing = ingredienti[i];
+    const costo = (ing.prezzo / 1000) * grammi;
+    righeRicettaCorrente.push({ nome: ing.nome, grammi, costo });
+    document.getElementById('grammiUsati').value = '';
+    disegnaRigheRicetta();
+  });
+
+  ['numPorzioni','prezzoVendita','targetFoodCost'].forEach(id => document.getElementById(id).addEventListener('input', aggiornaRiepilogo));
+
+  function disegnaListaRicette() {
+    listaRicette.innerHTML = '';
+    if (ricette.length === 0) { statoVuotoLista.style.display = 'block'; return; }
+    statoVuotoLista.style.display = 'none';
+    ricette.forEach((r, i) => {
+      const div = document.createElement('div');
+      div.className = 'chip-ricetta';
+      div.innerHTML = `<span>${r.nome}</span><span class="costo">${formattaEuro(r.costoPorzione)}/porz.</span>`;
+      div.addEventListener('click', () => caricaRicetta(i));
+      listaRicette.appendChild(div);
+    });
+  }
+
+  function caricaRicetta(i) {
+    const r = ricette[i];
+    document.getElementById('nomeRicetta').value = r.nome;
+    document.getElementById('numPorzioni').value = r.porzioni;
+    document.getElementById('prezzoVendita').value = r.prezzoVendita || '';
+    document.getElementById('targetFoodCost').value = r.targetFoodCost || 30;
+    righeRicettaCorrente = JSON.parse(JSON.stringify(r.righe));
+    ricettaInModifica = i;
+    disegnaRigheRicetta();
+  }
+
+  document.getElementById('btnSalvaRicetta').addEventListener('click', () => {
+    const nome = document.getElementById('nomeRicetta').value.trim();
+    if (!nome || righeRicettaCorrente.length === 0) return;
+    const costoTotale = righeRicettaCorrente.reduce((s, r) => s + r.costo, 0);
+    const porzioni = Math.max(1, parseInt(document.getElementById('numPorzioni').value, 10) || 1);
+    const prezzoVendita = parseFloat(document.getElementById('prezzoVendita').value) || 0;
+    const targetFoodCost = parseFloat(document.getElementById('targetFoodCost').value) || 30;
+
+    const ricettaSalvata = { nome, righe: righeRicettaCorrente, porzioni, prezzoVendita, targetFoodCost, costoTotale, costoPorzione: costoTotale / porzioni };
+
+    if (ricettaInModifica !== null) ricette[ricettaInModifica] = ricettaSalvata;
+    else ricette.push(ricettaSalvata);
+
+    localStorage.setItem(CHIAVE_RICETTE, JSON.stringify(ricette));
+    disegnaListaRicette();
+
+    ricettaInModifica = null;
+    righeRicettaCorrente = [];
+    document.getElementById('nomeRicetta').value = '';
+    document.getElementById('numPorzioni').value = 1;
+    document.getElementById('prezzoVendita').value = '';
+    document.getElementById('targetFoodCost').value = 30;
+    disegnaRigheRicetta();
+  });
+
+  /* ---------------- REPORT ---------------- */
+  function costruisciReport(){
+    const grigliaKpi = document.getElementById('grigliaKpi');
+    const valoreMagazzino = ingredienti.reduce((s, i) => s + i.prezzo * i.quantita, 0);
+    const numScorteBasse = ingredienti.filter(i => i.quantita <= 2).length;
+    const foodCostMedio = ricette.length
+      ? ricette.filter(r => r.prezzoVendita > 0).reduce((s, r) => s + (r.costoPorzione / r.prezzoVendita) * 100, 0) / (ricette.filter(r => r.prezzoVendita > 0).length || 1)
+      : 0;
+    const ricetteConPrezzo = ricette.filter(r => r.prezzoVendita > 0).length;
+
+    grigliaKpi.innerHTML = `
+      <div class="kpi"><div class="etichetta">Valore magazzino</div><div class="valore-kpi">${formattaEuro(valoreMagazzino)}</div><div class="nota-kpi">${ingredienti.length} ingredienti totali</div></div>
+      <div class="kpi"><div class="etichetta">Scorte basse</div><div class="valore-kpi">${numScorteBasse}</div><div class="nota-kpi">ingredienti ≤ 2 kg</div></div>
+      <div class="kpi"><div class="etichetta">Ricette salvate</div><div class="valore-kpi">${ricette.length}</div><div class="nota-kpi">${ricetteConPrezzo} con prezzo di vendita impostato</div></div>
+      <div class="kpi"><div class="etichetta">Food cost medio</div><div class="valore-kpi">${ricetteConPrezzo ? foodCostMedio.toFixed(1) + '%' : '—'}</div><div class="nota-kpi">sulle ricette con prezzo impostato</div></div>
+    `;
+
+    // Top ingredienti per valore
+    const topIng = document.getElementById('listaTopIngredienti');
+    const statoTopIng = document.getElementById('statoVuotoTopIngredienti');
+    if (ingredienti.length === 0) {
+      statoTopIng.style.display = 'block'; topIng.innerHTML = '';
+    } else {
+      statoTopIng.style.display = 'none';
+      const ordinati = [...ingredienti].map(i => ({...i, valore: i.prezzo * i.quantita})).sort((a,b) => b.valore - a.valore).slice(0, 5);
+      topIng.innerHTML = ordinati.map(i => `
+        <div class="riga-report">
+          <div><div class="nome-r">${i.nome}</div><div class="dettaglio-r">${i.quantita.toLocaleString('it-IT')} kg a € ${i.prezzo.toFixed(2)}/kg</div></div>
+          <div class="valore">${formattaEuro(i.valore)}</div>
+        </div>`).join('');
+    }
+
+    // Food cost per ricetta
+    const listaFC = document.getElementById('listaFoodCostRicette');
+    const statoFC = document.getElementById('statoVuotoRicetteReport');
+    if (ricette.length === 0) {
+      statoFC.style.display = 'block'; listaFC.innerHTML = '';
+    } else {
+      statoFC.style.display = 'none';
+      const conPerc = ricette.map(r => ({ ...r, perc: r.prezzoVendita > 0 ? (r.costoPorzione / r.prezzoVendita) * 100 : null }))
+                              .sort((a,b) => (b.perc ?? -1) - (a.perc ?? -1));
+      listaFC.innerHTML = conPerc.map(r => {
+        let classe = 'fc-ok', testo = 'OTTIMO';
+        if (r.perc === null) { classe=''; testo=''; }
+        else if (r.perc > 35) { classe = 'fc-alto'; testo = 'ALTO'; }
+        else if (r.perc > 28) { classe = 'fc-attenzione'; testo = 'ATTENZIONE'; }
+        return `
+          <div class="riga-report">
+            <div><div class="nome-r">${r.nome}</div><div class="dettaglio-r">costo ${formattaEuro(r.costoPorzione)}/porz.${r.prezzoVendita ? ' · vendita ' + formattaEuro(r.prezzoVendita) : ' · prezzo di vendita non impostato'}</div></div>
+            <div>${r.perc !== null ? `<span class="valore">${r.perc.toFixed(1)}%</span> <span class="food-cost-badge ${classe}">${testo}</span>` : ''}</div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // Avvio
+  disegnaTabella();
+  popolaSelectIngredienti();
+  disegnaRigheRicetta();
+  disegnaListaRicette();
+</script>
+</body>
+</html>
